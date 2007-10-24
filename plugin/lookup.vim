@@ -38,11 +38,11 @@ def lookup(word):
 
     # http://www.dict.org/links.html
     # http://www.luetzschena-stahmeln.de/dictd/index.php?freedictonly
-    conn = dictclient.Connection('vocabulary.aioe.org')
+    conn = dictclient.Connection('dict.org')
 
     output += "\n".join([d.getdefstr() for d in conn.define('wn', word)]) # WordNet
     output += "\n\n"
-    output += "\n".join([d.getdefstr() for d in conn.define('moby-thesaurus', word)])
+    output += "\n".join([d.getdefstr() for d in conn.define('moby-thes', word)])
 
     if len(output.strip()) == 0:
         output = "Sorry, couldn't find anything"
