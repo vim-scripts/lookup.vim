@@ -9,6 +9,14 @@ if &cp || (exists("g:loaded_lookup") && g:loaded_lookup)
 endif
 let g:loaded_lookup = 1
 
+if !exists("g:lookup_databases")
+    let g:lookup_databases = []
+endif
+
+if !exists("g:lookup_dict_para")
+    let g:lookup_dict_para = []
+endif
+
 function! s:isPythonInstalled()
     if !has('python')
         echoerr "lookup.vim requires vim compiled with +python"
@@ -26,26 +34,58 @@ function! s:DefPython()
 python << PYTHONEOF
 
 import vim
-# http://gopher.quux.org:70/devel/dictclient/dictclient_1.0.1.tar.gz
-# Download, 'tar -xvzf dictclient_1.0.1.tar.gz' and run 'python setup.py install'.
-import dictclient
+import subprocess as sp
+
+not_in_db = []
+failed = []
+success = 0
+output = ''
+
+def resetVariable():
+    global not_in_db, failed, success, output
+    failed = []
+    not_in_db = []
+    success = 0
+    output = ''
 
 def safequotes(string):
     return string.replace('"', "'")
 
+def safequotes(string):
+    return string.replace('"', "'")
+
+def run_dict(para, db=None):
+    user_para = vim.eval('g:lookup_dict_para')
+    global not_in_db, failed, success, output
+    try:
+        dict_out = sp.check_output(['dict'] + para + user_para,
+                stderr=sp.STDOUT, shell=False)
+    except sp.CalledProcessError as pe:
+        if (pe.returncode == 20) and db: not_in_db.append(db)
+        else: failed.append(pe.returncode)
+        return 0
+    output += dict_out + '\n'
+    success += 1
+    return 1
+
 def lookup(word):
-    output = ''
+    global output
+    resetVariable()
+    db = vim.eval('g:lookup_databases')
+    if db:
+        for dbname in db:
+            if run_dict(['--database', dbname, word], db=dbname):
+                output += '\n'
+    else:
+        run_dict([word])
 
-    # http://www.dict.org/links.html
-    # http://www.luetzschena-stahmeln.de/dictd/index.php?freedictonly
-    conn = dictclient.Connection('dict.org')
-
-    output += "\n".join([d.getdefstr() for d in conn.define('wn', word)]) # WordNet
-    output += "\n\n"
-    output += "\n".join([d.getdefstr() for d in conn.define('moby-thes', word)])
-
-    if len(output.strip()) == 0:
-        output = "Sorry, couldn't find anything"
+    newline = '\n' if success else ''
+    if not_in_db and db:
+        output = "%d database%s had no entry for \'%s\': %s%s%s" % (len(not_in_db),
+            '' if len(not_in_db) == 1 else 's', word,
+            ', '.join(str(i) for i in not_in_db), newline, output)
+    elif failed:
+        output = "dict command failed with returncode: %s\n%s" % (failed, output)
 
     vim.command('silent let g:lookup_meaning = "%s"' % safequotes(output))
 
@@ -62,11 +102,8 @@ function! Lookup()
 
     let word = expand("<cword>")
     execute "python lookup('" . word . "')"
-    echohl WarningMsg
     echo g:lookup_meaning
-    echohl None
 
 endfunction
 
 command Lookup call Lookup()
-
