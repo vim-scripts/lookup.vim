@@ -38,14 +38,14 @@ import subprocess as sp
 
 not_in_db = []
 failed = []
-success = 0
+success = []
 output = ''
 
 def resetVariable():
     global not_in_db, failed, success, output
     failed = []
     not_in_db = []
-    success = 0
+    success = []
     output = ''
 
 def safequotes(string):
@@ -65,7 +65,7 @@ def run_dict(para, db=None):
         else: failed.append(pe.returncode)
         return 0
     output += dict_out + '\n'
-    success += 1
+    if db: success.append(db)
     return 1
 
 def lookup(word):
@@ -86,6 +86,10 @@ def lookup(word):
             ', '.join(str(i) for i in not_in_db), newline, output)
     elif failed:
         output = "dict command failed with returncode: %s\n%s" % (failed, output)
+    if success and db:
+        output = "%d database%s entries for \'%s\': %s\n%s" % (len(success),
+            'has' if len(success) == 1 else 's have', word,
+            ', '.join(str(i) for i in success), output)
 
     vim.command('silent let g:lookup_meaning = "%s"' % safequotes(output))
 
@@ -94,16 +98,33 @@ endfunction
 
 call s:DefPython()
 
-function! Lookup()
-
+function Lookup(word)
     if !s:isPythonInstalled()
         return
     endif
 
-    let word = expand("<cword>")
-    execute "python lookup('" . word . "')"
+    execute "python lookup('" . a:word . "')"
     echo g:lookup_meaning
-
 endfunction
 
-command Lookup call Lookup()
+function LookupVisual()
+    sil! norm! gv"ty
+    let g:lookup_word = @t
+    call Lookup(g:lookup_word)
+endfunction
+
+function LookupReg()
+    let g:lookup_word = @0
+    call Lookup(g:lookup_word)
+endfunction
+
+function LookupCurWord()
+    " let g:lookup_word = expand("<cword>")
+    " call Lookup(g:lookup_word)
+    call Lookup(expand("<cword>"))
+endfunction
+
+command Lookup call LookupCurWord()
+command LookupVisual call LookupVisual()
+" vmap <Leader>tv :call LookupVisual()<CR>
+command LookupReg call LookupReg()
