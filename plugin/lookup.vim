@@ -18,11 +18,11 @@ if !exists("g:lookup_dict_para")
 endif
 
 function! s:isPythonInstalled()
-    if !has('python')
-        echoerr "lookup.vim requires vim compiled with +python"
+    if !has('python3')
+        echoerr "lookup.vim requires vim compiled with +python3"
     endif
 
-    return has('python')
+    return has('python3')
 endfunction
 
 function! s:DefPython()
@@ -31,7 +31,7 @@ function! s:DefPython()
         return
     endif
 
-python << PYTHONEOF
+python3 << PYTHONEOF
 
 import vim
 import subprocess as sp
@@ -59,7 +59,7 @@ def run_dict(para, db=None):
     global not_in_db, failed, success, output
     try:
         dict_out = sp.check_output(['dict'] + para + user_para,
-                stderr=sp.STDOUT, shell=False)
+                stderr=sp.STDOUT, shell=False).decode('utf-8')
     except sp.CalledProcessError as pe:
         if (pe.returncode == 20) and db: not_in_db.append(db)
         else: failed.append(pe.returncode)
@@ -103,7 +103,7 @@ function Lookup(word)
         return
     endif
 
-    execute "python lookup('" . a:word . "')"
+    execute "python3 lookup('" . a:word . "')"
     echo g:lookup_meaning
 endfunction
 
