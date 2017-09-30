@@ -2,4 +2,4 @@ This is a mirror of http://www.vim.org/scripts/script.php?script_id=2001
 
 Place your cursor over a word and run :Lookup. It will then display the list of meanings from a dictionary and the list of similar words from a thesaurus.
 
-It talks to a DICT server to look up the meaning, so the script will need an active internet connection to work.
+It talks to a DICT server (preferably running on localhost) to look up the meaning.
